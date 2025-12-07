@@ -607,15 +607,15 @@
         }
         
         function displayError(message) {
-            const container = document.getElementById('donationsContainer');
-            container.innerHTML = `
-                <div class="error-message">
-                    <h3 style="margin-bottom: 15px;">⚠️ Error</h3>
-                    <p>${message}</p>
-                    <p style="margin-top: 15px; font-size: 0.9em; opacity: 0.7;">Pastikan SAWERIA_JWT_TOKEN sudah diset di Vercel</p>
-                </div>
-            `;
-        }
+      const container = document.getElementById('donationsContainer');
+      container.innerHTML = `
+        <div class="empty-state">
+      <div class="empty-state-icon">📭</div>
+      <p>Belum ada donasi yang masuk</p>
+      <p style="margin-top: 10px; color: #666; font-size: 0.95em;">Menunggu donasi pertama...</p>
+    </div>
+  `;
+}
         
         function escapeHtml(text) {
             const div = document.createElement('div');
