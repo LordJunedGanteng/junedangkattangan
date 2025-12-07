@@ -1,10 +1,18 @@
 // api/donations.js
-// Endpoint untuk fetch donasi dari Saweria API
+// Endpoint untuk fetch donasi dari Saweria API dengan caching
+
+let cache = {
+  data: null,
+  timestamp: 0
+};
+
+const CACHE_DURATION = 30000; // 30 detik cache
 
 export default async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate');
   
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -15,6 +23,13 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Check cache
+    const now = Date.now();
+    if (cache.data && (now - cache.timestamp) < CACHE_DURATION) {
+      console.log('✅ Returning cached data');
+      return res.status(200).json(cache.data);
+    }
+
     const SAWERIA_JWT = process.env.SAWERIA_JWT_TOKEN;
 
     if (!SAWERIA_JWT) {
@@ -23,6 +38,8 @@ export default async function handler(req, res) {
         instructions: 'Set SAWERIA_JWT_TOKEN in Vercel environment variables'
       });
     }
+
+    console.log('🔄 Fetching fresh data from Saweria...');
 
     // Fetch transactions dari Saweria API
     const response = await fetch('https://api.saweria.co/user/transactions?page=1&pageSize=10', {
@@ -35,7 +52,16 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Saweria API Error:', errorText);
+      console.error('❌ Saweria API Error:', response.status, errorText);
+      
+      // Return cached data if available
+      if (cache.data) {
+        console.log('⚠️ Returning stale cache due to API error');
+        return res.status(200).json({
+          ...cache.data,
+          warning: 'Using cached data due to API error'
+        });
+      }
       
       return res.status(response.status).json({ 
         error: 'Failed to fetch from Saweria',
@@ -56,14 +82,35 @@ export default async function handler(req, res) {
       type: item.type || 'donation'
     }));
 
-    return res.status(200).json({
+    const result = {
       success: true,
       count: donations.length,
-      donations: donations
-    });
+      donations: donations,
+      cached_at: new Date().toISOString()
+    };
+
+    // Update cache
+    cache = {
+      data: result,
+      timestamp: now
+    };
+
+    console.log('✅ Fresh data cached');
+
+    return res.status(200).json(result);
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('❌ Error:', error);
+    
+    // Return cached data if available
+    if (cache.data) {
+      console.log('⚠️ Returning stale cache due to error');
+      return res.status(200).json({
+        ...cache.data,
+        warning: 'Using cached data due to error'
+      });
+    }
+    
     return res.status(500).json({ 
       error: 'Internal server error',
       message: error.message
