@@ -1,5 +1,5 @@
 // api/webhook.js
-// Endpoint untuk menerima webhook dari Saweria dan kirim ke Roblox MessagingService
+let donations = [];
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -7,73 +7,62 @@ export default async function handler(req, res) {
   }
 
   try {
-    const donation = req.body;
-    console.log('📨 Received donation:', donation);
+    const d = req.body;
 
-    const ROBLOX_API_KEY = process.env.ROBLOX_API_KEY;
-    const UNIVERSE_ID = process.env.UNIVERSE_ID;
-    const MESSAGING_TOPIC = process.env.MESSAGING_TOPIC || 'SaweriaDonations';
-
-    if (!ROBLOX_API_KEY || !UNIVERSE_ID) {
-      console.error('❌ Missing environment variables');
-      return res.status(500).json({ 
-        error: 'Server configuration error',
-        missing: {
-          api_key: !ROBLOX_API_KEY,
-          universe_id: !UNIVERSE_ID
-        }
-      });
-    }
-
-    const messageData = {
-      id: donation.id || Date.now().toString(),
-      donor: donation.donator_name || donation.donor_name || donation.donor || 'Anonymous',
-      amount: donation.amount_raw || donation.amount || 0,
-      message: donation.message || donation.note || '',
-      timestamp: donation.created_at || new Date().toISOString(),
-      type: 'saweria_donation',
-      raw: donation
+    // Format donasi
+    const donation = {
+      id: d.id || Date.now().toString(),
+      donor: d.donator_name || 'Anonymous',
+      amount: d.amount_raw || d.amount || 0,
+      message: d.message || '',
+      created_at: d.created_at || new Date().toISOString()
     };
 
-    console.log('📤 Sending to Roblox:', messageData);
+    // Simpan ke cache (max 20)
+    donations.unshift(donation);
+    if (donations.length > 20) donations.pop();
 
-    // ✅ DIPERBAIKI: HAPUS SPASI DI URL
-    const robloxResponse = await fetch(
-      `https://apis.roblox.com/messaging-service/v1/universes/${UNIVERSE_ID}/topics/${MESSAGING_TOPIC}`,
-      {
-        method: 'POST',
-        headers: {
-          'x-api-key': ROBLOX_API_KEY,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          message: JSON.stringify(messageData)
-        })
-      }
-    );
+    console.log('✅ Donasi diterima:', donation.donor, donation.amount);
 
-    if (!robloxResponse.ok) {
-      const errorText = await robloxResponse.text();
-      console.error('❌ Roblox API Error:', robloxResponse.status, errorText);
-      return res.status(500).json({ 
-        error: 'Failed to send to Roblox',
-        status: robloxResponse.status,
-        details: errorText
-      });
+    // === KIRIM KE ROBLOX ===
+    const ROBLOX_API_KEY = process.env.ROBLOX_API_KEY;
+    const UNIVERSE_ID = process.env.UNIVERSE_ID;
+    const MESSAGING_TOPIC = process.env.MESSAGING_TOPIC || 'Donations';
+
+    if (ROBLOX_API_KEY && UNIVERSE_ID) {
+      await fetch(
+        `https://apis.roblox.com/messaging-service/v1/universes/${UNIVERSE_ID}/topics/${MESSAGING_TOPIC}`,
+        {
+          method: 'POST',
+          headers: {
+            'x-api-key': ROBLOX_API_KEY,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message: JSON.stringify(donation)
+          })
+        }
+      ).catch(e => console.error('❌ Roblox send error:', e.message));
     }
 
-    console.log('✅ Successfully sent to Roblox!');
-    return res.status(200).json({ 
-      success: true,
-      message: 'Donation sent to Roblox',
-      data: messageData
-    });
+    // === OPSIONAL: Kirim ke Discord notif ===
+    const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
+    if (DISCORD_WEBHOOK_URL) {
+      await fetch(DISCORD_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: `🎉 **Donasi Baru!**\nDari: ${donation.donor}\nJumlah: **Rp${donation.amount.toLocaleString('id-ID')}**\nPesan: "${donation.message}"`
+        })
+      }).catch(e => console.error('❌ Discord send error:', e.message));
+    }
 
-  } catch (error) {
-    console.error('❌ Error:', error);
-    return res.status(500).json({ 
-      error: 'Internal server error',
-      message: error.message
-    });
+    res.status(200).json({ success: true, donation });
+  } catch (err) {
+    console.error('❌ Webhook error:', err);
+    res.status(500).json({ error: 'Internal error' });
   }
 }
+
+// Ekspor cache untuk /api/donations
+export { donations };
