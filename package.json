@@ -1,0 +1,23 @@
+{
+  "name": "saweria-to-roblox",
+  "version": "1.0.0",
+  "description": "Real-time donation alerts from Saweria to Roblox",
+  "main": "api/webhook.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "keywords": [
+    "saweria",
+    "roblox",
+    "donation",
+    "webhook",
+    "streaming"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "vercel": "^33.0.0"
+  }
+}
