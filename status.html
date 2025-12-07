@@ -382,7 +382,7 @@
                             </div>
                             <div class="status-badge online">
                                 <div class="status-dot online"></div>
-                                Online
+                                Operational
                             </div>
                         </div>
                         <div class="status-details">
@@ -424,35 +424,35 @@
                             </div>
                             <div class="status-row">
                                 <span class="status-label">Topic</span>
-                                <span class="status-value">${data.environment?.MESSAGING_TOPIC || 'N/A'}</span>
+                                <span class="status-value">${data.environment?.MESSAGING_TOPIC || 'Donations'}</span>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Saweria Connection -->
+                    <!-- Saweria Webhook (BARU) -->
                     <div class="status-card">
                         <div class="status-header">
                             <div class="status-title">
                                 <span class="status-icon">💰</span>
-                                <span>Saweria API</span>
+                                <span>Saweria Webhook</span>
                             </div>
-                            <div class="status-badge ${data.environment?.SAWERIA_JWT_TOKEN?.includes('✅') ? 'online' : 'offline'}">
-                                <div class="status-dot ${data.environment?.SAWERIA_JWT_TOKEN?.includes('✅') ? 'online' : 'offline'}"></div>
-                                ${data.environment?.SAWERIA_JWT_TOKEN?.includes('✅') ? 'Connected' : 'Not Connected'}
+                            <div class="status-badge ${data.webhookActive ? 'online' : 'warning'}">
+                                <div class="status-dot ${data.webhookActive ? 'online' : 'warning'}"></div>
+                                ${data.webhookActive ? 'Active' : 'Not Tested'}
                             </div>
                         </div>
                         <div class="status-details">
                             <div class="status-row">
-                                <span class="status-label">JWT Token</span>
-                                <span class="status-value ${data.environment?.SAWERIA_JWT_TOKEN?.includes('✅') ? 'success' : 'error'}">${data.environment?.SAWERIA_JWT_TOKEN || 'N/A'}</span>
+                                <span class="status-label">Endpoint</span>
+                                <span class="status-value success">/api/donations</span>
                             </div>
                             <div class="status-row">
-                                <span class="status-label">Token Validity</span>
-                                <span class="status-value">~72 hours</span>
+                                <span class="status-label">Status</span>
+                                <span class="status-value">${data.webhookActive ? 'Ready to receive donations' : 'Waiting for first donation'}</span>
                             </div>
                             <div class="status-row">
-                                <span class="status-label">Note</span>
-                                <span class="status-label" style="font-size: 0.85em;">Regenerate if expired</span>
+                                <span class="status-label">Setup</span>
+                                <span class="status-label" style="font-size: 0.85em;">Set webhook URL in Saweria Dashboard</span>
                             </div>
                         </div>
                     </div>
@@ -468,17 +468,9 @@
                     <div class="endpoint-item">
                         <div>
                             <span class="endpoint-method post">POST</span>
-                            <span class="endpoint-path">/api/webhook</span>
+                            <span class="endpoint-path">/api/donations</span>
                         </div>
                         <span style="color: #888; font-size: 0.9em;">Saweria Webhook</span>
-                    </div>
-                    
-                    <div class="endpoint-item">
-                        <div>
-                            <span class="endpoint-method post">POST</span>
-                            <span class="endpoint-path">/api/test</span>
-                        </div>
-                        <span style="color: #888; font-size: 0.9em;">Test Donation</span>
                     </div>
                     
                     <div class="endpoint-item">
@@ -486,7 +478,7 @@
                             <span class="endpoint-method get">GET</span>
                             <span class="endpoint-path">/api/donations</span>
                         </div>
-                        <span style="color: #888; font-size: 0.9em;">Fetch Donations</span>
+                        <span style="color: #888; font-size: 0.9em;">Fetch Donations (for frontend)</span>
                     </div>
                     
                     <div class="endpoint-item">
@@ -503,16 +495,18 @@
                         <h3>⚠️ Configuration Required</h3>
                         <p style="color: #aaa; margin-bottom: 15px;">Set the following environment variables in Vercel:</p>
                         <ul>
-                            <li><code>ROBLOX_API_KEY</code> - Get from create.roblox.com/credentials</li>
+                            <li><code>ROBLOX_API_KEY</code> - Get from <a href="https://create.roblox.com/dashboard/credentials" target="_blank" style="color:#9333ea">Roblox Credentials</a></li>
                             <li><code>UNIVERSE_ID</code> - Your Roblox game universe ID</li>
-                            <li><code>SAWERIA_JWT_TOKEN</code> - Token from Saweria (expires in 72h)</li>
-                            <li><code>MESSAGING_TOPIC</code> - Optional (default: SaweriaDonations)</li>
+                            <li><code>MESSAGING_TOPIC</code> - Optional (default: Donations)</li>
                         </ul>
                     </div>
                 ` : `
                     <div class="instructions" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3);">
                         <h3 style="color: #10b981;">✅ System Fully Configured</h3>
-                        <p style="color: #aaa;">All required environment variables are set. Your webhook is ready to receive donations!</p>
+                        <p style="color: #aaa;">Webhook is live. Donations will appear in real-time!</p>
+                        <p style="color: #888; font-size: 0.9em; margin-top: 10px;">
+                            📌 Webhook URL: <code>https://saweriajuned2.vercel.app/api/donations</code>
+                        </p>
                     </div>
                 `}
             `;
@@ -520,10 +514,7 @@
             container.innerHTML = html;
         }
         
-        // Load on page load
         loadStatus();
-        
-        // Auto refresh every 30 seconds
         setInterval(loadStatus, 30000);
     </script>
 </body>
