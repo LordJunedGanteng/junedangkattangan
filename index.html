@@ -363,6 +363,24 @@
             z-index: 100;
         }
 
+        .countdown-badge {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            background: rgba(147, 51, 234, 0.2);
+            border: 1px solid rgba(147, 51, 234, 0.3);
+            color: #9333ea;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 0.85em;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 100;
+        }
+
         .status-dot {
             width: 8px;
             height: 8px;
@@ -407,6 +425,11 @@
     <div class="status-badge">
         <div class="status-dot"></div>
         LIVE
+    </div>
+
+    <div class="countdown-badge" id="countdownBadge">
+        <span>⏱️</span>
+        <span id="countdownText">Starting in 15s...</span>
     </div>
 
     <div class="container">
@@ -466,7 +489,27 @@
         
         createParticles();
 
-        const FETCH_INTERVAL = 30000;
+        const FETCH_INTERVAL = 30000; // 30 detik auto-refresh
+        const INITIAL_DELAY = 15000; // 15 detik delay sebelum start
+        
+        let countdownSeconds = 15;
+        let isInitialLoad = true;
+        
+        // Update countdown display
+        function updateCountdown() {
+            const countdownBadge = document.getElementById('countdownBadge');
+            const countdownText = document.getElementById('countdownText');
+            
+            if (countdownSeconds > 0) {
+                countdownText.textContent = `Loading in ${countdownSeconds}s...`;
+                countdownSeconds--;
+            } else {
+                countdownBadge.style.display = 'none';
+            }
+        }
+        
+        // Countdown timer
+        const countdownInterval = setInterval(updateCountdown, 1000);
         
         function formatRupiah(amount) {
             return new Intl.NumberFormat('id-ID', {
@@ -503,6 +546,13 @@
                 
                 if (data.success && data.donations) {
                     displayDonations(data.donations);
+                    
+                    // Hide countdown after first successful load
+                    if (isInitialLoad) {
+                        isInitialLoad = false;
+                        clearInterval(countdownInterval);
+                        document.getElementById('countdownBadge').style.display = 'none';
+                    }
                 } else {
                     throw new Error('Invalid response format');
                 }
@@ -573,8 +623,12 @@
             return div.innerHTML;
         }
         
-        fetchDonations();
-        setInterval(fetchDonations, FETCH_INTERVAL);
+        // Initial fetch dengan delay 15 detik
+        setTimeout(() => {
+            fetchDonations();
+            // Auto refresh setiap 30 detik setelah initial load
+            setInterval(fetchDonations, FETCH_INTERVAL);
+        }, INITIAL_DELAY);
     </script>
 </body>
 </html>
